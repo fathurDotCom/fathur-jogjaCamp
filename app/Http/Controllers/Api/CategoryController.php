@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use Illuminate\Http\Request;
+use App\Http\Requests\CategoryRequest;
 use App\Http\Resources\CategoryResource;
+use Illuminate\Support\Facades\Validator;
+use App\Jobs\MailJob;
+use App\Models\Category;
+use App\Models\User;
 
 class CategoryController extends Controller
 {
@@ -25,20 +29,29 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|max:255|unique:categories',
             'is_publish' => 'boolean',
+        ],[
+            'name.required' => 'Bidang nama wajib terisi.',
+            'name.string' => 'Bidang nama harus berupa text.',
+            'name.max' => 'Jumlah karakter pada bidang nama melewati kapasitas',
+            'name.unique' => 'Nama telah terpakai',
+            'is_publish.boolean' => 'Bidang publish harus berupa boolean (true/false)',
         ]);
 
-        $category = Category::create($validatedData);
-        
-        $message =  'Kategori ' . $category->name . ' telah ditambahkan';
-        $job = new MailJob($user, $category);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
 
-        dispatch($job);
+        $category = Category::create($validator->validated());
+
+        $user = User::find(1);
+
+        $tipe = "create";
+        $job = dispatch(new MailJob($tipe, $user, $category));
 
         return response()->json($category, 201);
-        // return new CategoryResource(201, 'success', $category);
     }
 
     /**
@@ -53,17 +66,26 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Category $category)
+    public function update(CategoryRequest $request, Category $category)
     {
-        $validatedData = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|max:255|unique:categories,name,' . $category->id,
             'is_publish' => 'boolean',
+        ],[
+            'name.required' => 'Bidang nama wajib terisi.',
+            'name.string' => 'Bidang nama harus berupa text.',
+            'name.max' => 'Jumlah karakter pada bidang nama melewati kapasitas',
+            'name.unique' => 'Nama telah terpakai',
+            'is_publish.boolean' => 'Bidang publish harus berupa boolean (true/false)',
         ]);
 
-        $category->update($validatedData);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $category->update($validator->validated());
 
         return response()->json($category, 200);
-        // return new CategoryResource(200, 'success', $category);
     }
 
     /**
@@ -71,14 +93,12 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        $message =  'Kategori ' . $category->name . ' telah dihapus';
+        $user = User::find(1);
+        $tipe = "delete";
+        $job = dispatch(new MailJob($tipe, $user));
 
         $category->delete();
 
-        $job = new MailJob($user, $category);
-        dispatch($job);
-
-        return response()->json($category, 204);
-        // return new CategoryResource(204, 'success');
+        return response()->json(null, 204);
     }
 }

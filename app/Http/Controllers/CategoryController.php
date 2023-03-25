@@ -33,13 +33,12 @@ class CategoryController extends Controller
      */
     public function store(CategoryRequest $request)
     {
-        $user = User::find(1);
-
         $category = new Category();
-        $category->name = $request->input('name');
-        $category->is_publish = $request->input('is_publish') ?? false;
+        $category->name = $request->name;
+        $category->is_publish = $request->is_publish ?? false;
         $category->save();
 
+        $user = User::find(1);
         $tipe = "create";
         $job = dispatch(new MailJob($tipe, $user, $category));
 
@@ -67,8 +66,8 @@ class CategoryController extends Controller
      */
     public function update(CategoryRequest $request, Category $category)
     {
-        $category->name = $request->input('name');
-        $category->is_publish = $request->input('is_publish') ?? false;
+        $category->name = $request->name;
+        $category->is_publish = $request->is_publish ?? false;
         $category->save();
 
         return redirect()->route('category.index')->with('success', 'Category created successfully.');

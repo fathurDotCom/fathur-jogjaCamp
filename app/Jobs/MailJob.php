@@ -27,6 +27,6 @@ class MailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Mail::to($this->user->email)->send(new CategoryMail($this->tipe, $this->category));
+        Mail::to(@$this->user->email ?? 'testing@inbox.mailtrap.io')->send(new CategoryMail($this->tipe, $this->category));
     }
 }
